@@ -1,8 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using powerplant_coding_challenge_implementation.Logging;
 using powerplant_coding_challenge_implementation.Models;
 using powerplant_coding_challenge_implementation.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace powerplant_coding_challenge_implementation.Controllers
 {
@@ -11,28 +16,56 @@ namespace powerplant_coding_challenge_implementation.Controllers
     public class ProductionPlanController : ControllerBase
     {
         private readonly ILogger<ProductionPlanController> _logger;
-        private IMeritOrderCalculator _meritOrderCalculator;
-        private ILoadAssignor _loadAssignor;
+        private readonly IMeritOrderCalculator _meritOrderCalculator;
+        private readonly ILoadAssignor _loadAssignor;
 
-        public ProductionPlanController(ILogger<ProductionPlanController> logger,IMeritOrderCalculator meritOrderCalculator, ILoadAssignor loadAssignor)
+        public ProductionPlanController(
+            ILogger<ProductionPlanController> logger,
+            IMeritOrderCalculator meritOrderCalculator,
+            ILoadAssignor loadAssignor)
         {
-            _logger = logger;
-            _meritOrderCalculator = meritOrderCalculator;
-            _loadAssignor = loadAssignor;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _meritOrderCalculator = meritOrderCalculator ?? throw new ArgumentNullException(nameof(meritOrderCalculator));
+            _loadAssignor = loadAssignor ?? throw new ArgumentNullException(nameof(loadAssignor));
         }
 
         [HttpPost(Name = "productionplan")]
-        public IActionResult PostProductionPlan([FromBody] ProductionPlanPayload productionPlanPayload)
+        public async Task<IActionResult> PostProductionPlan([FromBody] ProductionPlanPayload productionPlanPayload)
         {
-            _logger.LogTrace($"Enter PostProductionPlan");
+            try
+            {
+                _logger.LogTrace("Enter PostProductionPlan");
 
-            List<PowerPlant> meritOrderedPowerPlants = _meritOrderCalculator.Compute(productionPlanPayload);
+                if (!ModelState.IsValid)
+                {
+                    ModelStateLogger.LogErrors(ModelState, _logger);
+                    return BadRequest(ModelState);
+                }
 
-            List<ProductionPlanResponse> response = _loadAssignor.Assign(meritOrderedPowerPlants,productionPlanPayload.Load);
+                List<PowerPlant> meritOrderedPowerPlants = await _meritOrderCalculator.ComputeAsync(productionPlanPayload);
 
-            _logger.LogTrace($"Exit PostProductionPlan Status : Ok");
+                List<ProductionPlanResponse> response = await _loadAssignor.AssignAsync(meritOrderedPowerPlants, productionPlanPayload.Load);
 
-            return Ok(response);
+                _logger.LogTrace("Exit PostProductionPlan Status: Ok");
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred in PostProductionPlan");
+                return StatusCode((int)HttpStatusCode.InternalServerError, "An error occurred");
+            }
+        }
+        private void LogModelStateErrors()
+        {
+            IEnumerable<string> errorMessages = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage);
+
+            foreach (string errorMessage in errorMessages)
+            {
+                _logger.LogWarning(errorMessage);
+            }
         }
     }
 }

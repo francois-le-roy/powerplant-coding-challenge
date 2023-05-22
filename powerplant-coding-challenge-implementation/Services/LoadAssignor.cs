@@ -1,40 +1,46 @@
-﻿using powerplant_coding_challenge_implementation.Controllers;
+﻿using Microsoft.Extensions.Logging;
 using powerplant_coding_challenge_implementation.Models;
 using powerplant_coding_challenge_implementation.Services.Interfaces;
+using System.Collections.Generic;
 
 namespace powerplant_coding_challenge_implementation.Services
 {
     public class LoadAssignor : ILoadAssignor
     {
-        private readonly ILogger<ProductionPlanController> _logger;
-        public LoadAssignor(ILogger<ProductionPlanController> logger)
+        private readonly ILogger<LoadAssignor> _logger;
+
+        public LoadAssignor(ILogger<LoadAssignor> logger)
         {
-            _logger=logger;
+            _logger = logger;
         }
 
-        public List<ProductionPlanResponse> Assign(List<PowerPlant> meritOrderedPowerPlants,int load)
+        public Task<List<ProductionPlanResponse>> AssignAsync(List<PowerPlant> meritOrderedPowerPlants, int load)
         {
             List<ProductionPlanResponse> response = new();
 
-            foreach(PowerPlant powerPlant in meritOrderedPowerPlants)
+            foreach (PowerPlant powerPlant in meritOrderedPowerPlants)
             {
-             
+                int loadToAssign = CalculateLoadToAssign(load, powerPlant.PActual);
+                load -= loadToAssign;
 
-                if (load == 0)
-                {
-                    ProductionPlanResponse productionPlanResponse = new ProductionPlanResponse(powerPlant.Name, 0);
-                    response.Add(productionPlanResponse);
-                }
-                else
-                {
-                    int loadToAssign = (load - powerPlant.PActual > 0) ? powerPlant.PActual : load;
-                    load -= loadToAssign;
-                    ProductionPlanResponse productionPlanResponse = new ProductionPlanResponse(powerPlant.Name, loadToAssign);
-                    response.Add(productionPlanResponse);
-                }
-                
+                ProductionPlanResponse productionPlanResponse = new(powerPlant.Name, loadToAssign);
+                response.Add(productionPlanResponse);
             }
-            return response;
+
+            return Task.FromResult(response);
+        }
+
+        private int CalculateLoadToAssign(int remainingLoad, int powerPlantPActual)
+        {
+            if (remainingLoad == 0)
+            {
+                return 0;
+            }
+            else
+            {
+                int loadToAssign = (remainingLoad - powerPlantPActual > 0) ? powerPlantPActual : remainingLoad;
+                return loadToAssign;
+            }
         }
     }
 }

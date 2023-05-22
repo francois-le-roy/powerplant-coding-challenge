@@ -4,6 +4,6 @@ namespace powerplant_coding_challenge_implementation.Services.Interfaces
 {
     public interface IMeritOrderCalculator
     {
-        List<PowerPlant> Compute(ProductionPlanPayload productionPlanPayload);
+        Task<List<PowerPlant>> ComputeAsync(ProductionPlanPayload productionPlanPayload);
     }
 }

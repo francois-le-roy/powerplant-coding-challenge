@@ -14,7 +14,7 @@ namespace powerplant_coding_challenge_implementation.Services
             _logger=logger;
         }
 
-        public List<PowerPlant> Compute(ProductionPlanPayload productionPlanPayload)
+        public Task<List<PowerPlant>> ComputeAsync(ProductionPlanPayload productionPlanPayload)
         {
             _logger.LogTrace("start computing order");
             List<ProductionPlanResponse> productionPlanResponses = new List<ProductionPlanResponse>();
@@ -60,7 +60,8 @@ namespace powerplant_coding_challenge_implementation.Services
             }
             _logger.LogTrace("end computing order");
 
-            return powerPlantByProfit.OrderByDescending(e => e.Value).Select(e => e.Key).ToList<PowerPlant>();
+            var res =  powerPlantByProfit.OrderByDescending(e => e.Value).Select(e => e.Key).ToList<PowerPlant>();
+            return Task.FromResult(res);
         }
     }
 }
