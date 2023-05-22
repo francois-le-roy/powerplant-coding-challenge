@@ -1,5 +1,5 @@
-﻿using powerplant_coding_challenge_implementation.Constant;
-using powerplant_coding_challenge_implementation.Controllers;
+﻿using powerplant_coding_challenge_implementation.Controllers;
+using powerplant_coding_challenge_implementation.Enum;
 using powerplant_coding_challenge_implementation.Models;
 using powerplant_coding_challenge_implementation.Services.Interfaces;
 
